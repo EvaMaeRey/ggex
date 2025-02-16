@@ -1,0 +1,448 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# ggex
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+ggex (think 'FedEx') is for 'ex' as in fast and expressive and 'ex' for extension/extenders.
+
+
+## `qlayer()`, is `layer()` with plenty of defaults
+
+```{r qlayer}
+qlayer <- function (mapping = NULL, data = NULL, geom = ggplot2::GeomPoint, 
+                    stat = ggplot2::StatIdentity, 
+    position = position_identity(), ..., na.rm = FALSE, show.legend = NA, 
+    inherit.aes = TRUE) 
+{
+    ggplot2::layer(data = data, mapping = mapping, geom = geom, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, 
+            ...))
+}
+```
+
+```{r}
+library(ggplot2)
+ggplot(data = cars) + 
+  aes(speed, dist) + 
+  qlayer()
+
+last_plot() + 
+  qlayer(geom = GeomTile)
+
+last_plot() + 
+  qlayer(position = "jitter", color = "red")
+
+last_plot() + 
+  ggchalkboard::theme_chalkboard()
+
+```
+
+## `combine_aes()` to make small adjustments to exising `default_aes` settings
+
+```{r}
+combine_aes <- utils::modifyList
+```
+
+
+```{r}
+GeomPoint$default_aes
+
+combine_aes(GeomPoint$default_aes, aes(color = "blue"))
+
+
+GeomBluePoint <- ggproto("GeomBluePoint", 
+                         GeomPoint, 
+                         default_aes = 
+                           combine_aes(GeomPoint$default_aes, 
+                                       aes(color = "blue")))
+
+ggplot(cars) + 
+  aes(speed, dist) + 
+  stat_identity(geom = GeomBluePoint)
+```
+
+
+
+### `combine_aes()` examples containing recommended usage for new geom theming... use `from_theme()`, `col_mix()`, `paper`, `ink`, `accent` etc.
+
+#### GeomBubble, GeomBubbleColorMix, GeomPointAccentColor
+
+```{r}
+GeomPoint$default_aes
+
+GeomBubble <- ggproto("GeomBubble", 
+                      GeomPoint, 
+                      default_aes = combine_aes(GeomPoint$default_aes, 
+                                                aes(shape = 21,
+                                                    size = from_theme(pointsize*4))))
+
+GeomBubble$default_aes
+
+ggplot(cars) + 
+  aes(speed, dist) + 
+  qlayer(geom = GeomBubble)
+
+aes_new_bubble_colmix <- aes(shape = 21,
+                             size = from_theme(pointsize*4),
+                             fill = from_theme(ggplot2:::col_mix(ink, paper, 0.35)))
+
+GeomBubbleColorMix <- ggproto("GeomBubbleColorMix", 
+                              GeomPoint, 
+                              default_aes = combine_aes(GeomPoint$default_aes,
+                                                        aes_new_bubble_colmix))
+
+ggplot(cars) + 
+  aes(speed, dist) + 
+  qlayer(geom = GeomBubbleColorMix)
+
+GeomPointAccentColor <- ggproto("GeomPointAccentColor",  
+                                GeomPoint,
+                                default_aes = combine_aes(GeomPoint$default_aes,
+                                                          aes(color = from_theme(accent))))
+
+ggplot(cars) + 
+  aes(speed, dist) + 
+  qlayer(geom = GeomPointAccentColor, size = 6, alpha = .5) + 
+  geom_smooth()
+
+last_plot() + 
+  ggchalkboard::theme_chalkboard()
+```
+
+
+#### GeomPolygonWithOutline, GeomPolygonOutline
+
+```{r}
+GeomPolygonWithOutline <- ggproto("GeomPolygonWithOutline", 
+                                  GeomPolygon,
+                                  default_aes = combine_aes(GeomPolygon$default_aes,
+                                                            aes(color = from_theme(ink),
+                                                                fill = from_theme(ggplot2:::col_mix(ink, paper, 0.85)))))
+  
+GeomPolygonOutline <- ggproto("GeomPolygonOutline",  # New Geom
+                              GeomPolygon, # inherit
+                              default_aes = combine_aes(GeomPolygon$default_aes,
+                                                        aes(color = from_theme(ink),
+                                                            fill = NA)))
+
+ggplot(cars) + 
+  aes(speed, dist) + 
+  qlayer(geom = GeomPolygonWithOutline)
+
+last_plot() + 
+  ggchalkboard::theme_chalkboard()
+
+ggplot(cars) + 
+  aes(speed, dist) + 
+  qlayer(geom = GeomPolygonOutline)
+
+last_plot() + 
+  ggchalkboard::theme_chalkboard()
+```
+
+
+#### GeomLabelClearBackground, GeomLabelWithPanelBackground, GeomLabelWithPanelBackground
+
+```{r}
+GeomLabelClearBackground <- ggproto("GeomLabelClearBackground",
+                                    GeomLabel,
+                                    default_aes = 
+                                      combine_aes(GeomLabel$default_aes, 
+                                                  aes(fill = NA, linewidth = 0)))
+
+ggplot(cars) + 
+  aes(speed, dist, label = dist) +
+  geom_point() +
+  qlayer(geom = GeomLabelClearBackground, 
+         vjust = "outward",
+         hjust = "outward")
+
+last_plot() + 
+  ggchalkboard::theme_chalkboard()
+
+
+
+# I'm pretty sure this isn't right, and maybe 'right' is not possible, but I like the idea of it.
+GeomLabelWithPanelBackground <- ggproto("GeomLabelWithPanelBackground",
+                                    GeomLabel,
+                                    default_aes = 
+                                      combine_aes(GeomLabel$default_aes, 
+                                                  aes(fill =
+                                                        from_theme(ggplot2:::col_mix(ink, paper, .92)),
+                                                      linewidth = 0)))
+                                    
+ggplot(cars) + 
+  aes(speed, dist, label = dist) +
+  geom_point() +
+  qlayer(geom = GeomLabelWithPanelBackground, 
+         vjust = "outward",
+         hjust = "outward"
+         )
+
+
+# also not 100% sure what's going on here - why does label outline not disappear?
+GeomLabelRepelWithPanelBackground <- ggproto("GeomLabelRepelWithPanelBackground",
+                                    ggrepel::GeomLabelRepel,
+                                    default_aes = 
+                                      combine_aes(ggrepel::GeomLabelRepel$default_aes, 
+                                                  aes(fill =
+                                                        from_theme(ggplot2:::col_mix(ink, paper, .92)),
+                                                      label.size = 0,
+                                                      linewidth = 0)))
+
+
+ggplot(cars) + 
+  aes(speed, dist, label = dist) +
+  geom_point() +
+  qlayer(geom = GeomLabelRepelWithPanelBackground)
+
+```
+
+## `qproto_update()` lets you use an existing proto object, minimally modified, in a layer(), qlayer(), geom_\*() or stat_*() function.  
+
+
+```{r}
+proto_update <- function (`_class`, `_inherit`, default_aes_update = NULL, ...) {
+    if (!is.null(default_aes_update)) {
+        
+      new_default_aes <- combine_aes(`_inherit`$default_aes, default_aes_update)
+      
+    } else {
+      
+      new_default_aes <- `_inherit`$default_aes
+      
+    }
+  
+    ggplot2::ggproto(`_class` = `_class`, 
+                     `_inherit` = `_inherit`,
+                     default_aes = new_default_aes, ...)
+}
+
+
+qproto_update <- function (`_inherit`, default_aes_update = NULL, ...){
+    proto_update("protoTemp", `_inherit`, default_aes_update = default_aes_update, 
+        ...)
+}
+```
+
+
+```{r}
+ggplot(cars) + 
+  aes(speed, dist) + 
+  qlayer(geom = qproto_update(GeomPoint, aes(shape = 21)), # try on geom w modified default aes
+         size = 8)
+```
+
+
+## The `qstat()` family lets you try out Stats without naming them.
+
+
+```{r}
+qstat <- function (compute_group = ggplot2::Stat$compute_group, ...) {
+    ggplot2::ggproto("StatTemp", Stat, compute_group = compute_group, 
+        ...)
+}
+```
+
+
+```{r}
+compute_group_mean <- function(data, scales){
+  
+  data |> dplyr::summarise(x = mean(x), y = mean(y))
+  
+}
+
+ggplot(cars) + 
+  aes(speed, dist) + 
+  geom_point() +
+  qlayer(geom = qproto_update(GeomPoint, 
+                              aes(size = from_theme(pointsize * 3))),
+             stat = qstat(compute_group_mean))
+
+last_plot() + 
+  ggchalkboard::theme_chalkboard()
+```
+
+
+```{r}
+qstat_group <- qstat
+
+qstat_layer <- function (compute_layer, ...){
+    ggplot2::ggproto("StatTemp", Stat, compute_layer = compute_layer, 
+        ...)
+}
+
+qstat_panel <- function (compute_panel, ...){
+    ggplot2::ggproto("StatTemp", Stat, compute_panel = compute_panel, 
+        ...)
+}
+```
+
+
+
+
+## `vars_pack()` and `vars_unpack()` allow for multi-var aesthetic mapping.
+
+June wrote this...
+
+https://github.com/ggplot2-extenders/ggplot-extension-club/discussions/18#discussioncomment-10219152
+
+
+> The major challenge here is that you'd want a single column to represent values across all of the predictors, so you'd need to do some kind of compression of values to make them fit inside a single column in the layer data. At least for PCA the predictors are of the same type, so you could make predictors a list-column of length-3 numeric vectors.
+
+> I edited your code a bit, introducing the nesting-unnesting functions vars_pack() and vars_unpack(). Essentially, the predictor columns are nested into a single column and lays dormant until you need it for PCA, at which point it's unnested back into a dataframe. Also note that remove_missing() should happen after the unnesting to spot individual NA values.
+
+
+```{r}
+library(tidyverse)
+
+vars_pack <- function(...) {
+  
+  varnames <- as.character(ensyms(...))
+  vars <- list(...)
+  listvec <- asplit(do.call(cbind, vars), 1)
+  structure(listvec, varnames = varnames)
+
+  }
+
+vars_unpack <- function(x) {
+  pca_vars <- x
+  df <- do.call(rbind, pca_vars)
+  colnames(df) <- attr(pca_vars, "varnames")
+  as.data.frame(df)
+  
+}
+```
+
+
+```{r}
+palmerpenguins::penguins %>% 
+  mutate(outcome = species, 
+         predictors = vars_pack(bill_length_mm, bill_depth_mm, flipper_length_mm)) %>% 
+    select(outcome, predictors) ->
+data
+
+head(data$predictors)
+
+
+data %>%
+    mutate(vars_unpack(predictors)) %>% 
+  select(-predictors) ->
+data
+
+
+compute_lm_multi <- function(data, scales){
+  
+  data %>% 
+    remove_missing() %>% 
+    select(x,y, predictors) %>% 
+    mutate(vars_unpack(predictors)) %>% 
+    select(-predictors) ->
+  data
+  
+  lm <- lm(data = data, formula = y ~ .)
+  
+  data$yend = data$y
+  data$y = lm$fitted.values
+  data$xend = data$x
+
+  data$residuals <- lm$residuals
+  
+  data
+}
+
+pvars <- vars_pack
+
+palmerpenguins::penguins %>% 
+  remove_missing() %>% 
+  mutate(x = bill_length_mm, y = bill_depth_mm, predictors = pvars(sex, species)) %>% 
+  select(x, y, predictors) %>% 
+  compute_lm_multi()
+
+StatLmMulti <- ggproto("StatLmMulti",
+                       Stat,
+                       compute_panel = compute_lm_multi)
+
+ 
+palmerpenguins::penguins |>
+  remove_missing() |>
+  ggplot() + 
+  aes(y = flipper_length_mm, x = bill_length_mm, predictors = pvars(species)) + 
+  geom_point() + 
+  qlayer(stat = StatLmMulti, 
+         geom = qproto_update(GeomPoint, 
+                              aes(color = from_theme(accent)))) + 
+  qlayer(stat = StatLmMulti, 
+         geom = qproto_update(GeomSegment,
+                              aes(color = from_theme(accent))),
+         linetype = "dotted")
+
+
+last_plot() + 
+  geom_smooth(color = "red", method = lm) + 
+  aes(group = species)
+
+
+last_plot() + 
+  ggchalkboard::theme_chalkboard()
+
+
+```
+
+---
+
+
+
+```{r}
+
+# seems like the greys might be switched out with ink and paper? Though maybe not...
+# from https://github.com/teunbrand/ggplot_tricks
+contrast <- function(colour) {
+  out   <- rep("grey20", length(colour))
+  light <- farver::get_channel(colour, "l", space = "hcl")
+  out[light < 50] <- "grey80"
+  out
+}
+
+# from https://github.com/teunbrand/ggplot_tricks
+aes_autocontrast <- aes(colour = after_scale(contrast(fill)))
+
+tidy_titanic <- Titanic |> data.frame() |> tidyr::uncount(Freq)
+tidy_titanic |> head()
+
+ggplot(tidy_titanic) + 
+  aes(Sex, Survived) + 
+  # sketch of geom_heat
+  qlayer(geom = GeomTile,
+         stat = qproto_update(StatSum, 
+                              aes(fill = after_stat(n),
+                                  size = NULL))) + 
+  # sketch of geom_heat_text
+  qlayer(geom = qproto_update(GeomText, aes_autocontrast),
+         stat = qproto_update(StatSum,
+                              aes(label = after_stat(n),
+                                  fill = after_stat(n),
+                                  size = NULL,
+                                  )))
+
+last_plot() + 
+  ggchalkboard::theme_chalkboard()
+
+
+```
+
+
