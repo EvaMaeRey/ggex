@@ -79,7 +79,7 @@ ggplot(cars) +
 
 ### `combine_aes()` examples containing recommended usage for new geom theming... use `from_theme()`, `col_mix()`, `paper`, `ink`, `accent` etc.
 
-#### GeomBubble, GeomBubbleColorMix, GeomPointAccentColor
+#### GeomBubble, GeomBubbleColorMixFilled, GeomPointToAccentColor
 
 ```{r}
 GeomPoint$default_aes
@@ -100,27 +100,33 @@ aes_new_bubble_colmix <- aes(shape = 21,
                              size = from_theme(pointsize*4),
                              fill = from_theme(ggplot2:::col_mix(ink, paper, 0.35)))
 
-GeomBubbleColorMix <- ggproto("GeomBubbleColorMix", 
+GeomBubbleColorMixFilled <- ggproto("GeomBubbleColorMixFilled", 
                               GeomPoint, 
                               default_aes = combine_aes(GeomPoint$default_aes,
                                                         aes_new_bubble_colmix))
 
 ggplot(cars) + 
   aes(speed, dist) + 
-  qlayer(geom = GeomBubbleColorMix)
+  qlayer(geom = GeomBubbleColorMixFilled)
 
-GeomPointAccentColor <- ggproto("GeomPointAccentColor",  
+GeomPointToAccentColor <- ggproto("GeomPointToAccentColor",  
                                 GeomPoint,
                                 default_aes = combine_aes(GeomPoint$default_aes,
                                                           aes(color = from_theme(accent))))
 
 ggplot(cars) + 
   aes(speed, dist) + 
-  qlayer(geom = GeomPointAccentColor, size = 6, alpha = .5) + 
+  qlayer(geom = GeomPointToAccentColor, size = 6, alpha = .5) + 
   geom_smooth()
 
 last_plot() + 
   ggchalkboard::theme_chalkboard()
+
+new_accent <- ggplot2:::col_mix("purple", "lightyellow", .7)
+new_accent
+
+last_plot() + 
+  ggchalkboard::theme_chalkboard(accent = new_accent)
 ```
 
 
@@ -271,7 +277,7 @@ ggplot(cars) +
   geom_point() +
   qlayer(geom = qproto_update(GeomPoint, 
                               aes(size = from_theme(pointsize * 3))),
-             stat = qstat(compute_group_mean))
+         stat = qstat(compute_group_mean))
 
 last_plot() + 
   ggchalkboard::theme_chalkboard()
@@ -317,7 +323,16 @@ vars_pack <- function(...) {
   listvec <- asplit(do.call(cbind, vars), 1)
   structure(listvec, varnames = varnames)
 
-  }
+}
+
+
+palmerpenguins::penguins |> 
+  mutate(outcome = species, 
+         predictors = vars_pack(bill_length_mm, bill_depth_mm, flipper_length_mm)) |> 
+  select(outcome, predictors) ->
+data_packed
+
+head(data_packed)
 
 vars_unpack <- function(x) {
   pca_vars <- x
@@ -326,24 +341,19 @@ vars_unpack <- function(x) {
   as.data.frame(df)
   
 }
+
+
+data_packed %>%
+    mutate(vars_unpack(predictors)) %>% 
+  select(-predictors) ->
+data_uppacked
+
+head(data_uppacked)
+
 ```
 
 
 ```{r}
-palmerpenguins::penguins %>% 
-  mutate(outcome = species, 
-         predictors = vars_pack(bill_length_mm, bill_depth_mm, flipper_length_mm)) %>% 
-    select(outcome, predictors) ->
-data
-
-head(data$predictors)
-
-
-data %>%
-    mutate(vars_unpack(predictors)) %>% 
-  select(-predictors) ->
-data
-
 
 compute_lm_multi <- function(data, scales){
   
@@ -365,47 +375,38 @@ compute_lm_multi <- function(data, scales){
   data
 }
 
-pvars <- vars_pack
+variables <- vars_pack
 
 palmerpenguins::penguins %>% 
   remove_missing() %>% 
-  mutate(x = bill_length_mm, y = bill_depth_mm, predictors = pvars(sex, species)) %>% 
+  mutate(x = bill_length_mm, y = bill_depth_mm, predictors = variables(sex, species)) %>% 
   select(x, y, predictors) %>% 
   compute_lm_multi()
-
-StatLmMulti <- ggproto("StatLmMulti",
-                       Stat,
-                       compute_panel = compute_lm_multi)
-
  
 palmerpenguins::penguins |>
   remove_missing() |>
   ggplot() + 
-  aes(y = flipper_length_mm, x = bill_length_mm, predictors = pvars(species)) + 
+  aes(y = flipper_length_mm, x = bill_length_mm, predictors = variables(species)) + 
   geom_point() + 
-  qlayer(stat = StatLmMulti, 
+  qlayer(stat = qstat_panel(compute_lm_multi), 
          geom = qproto_update(GeomPoint, 
                               aes(color = from_theme(accent)))) + 
-  qlayer(stat = StatLmMulti, 
+  qlayer(stat = qstat_panel(compute_lm_multi), 
          geom = qproto_update(GeomSegment,
                               aes(color = from_theme(accent))),
          linetype = "dotted")
-
 
 last_plot() + 
   geom_smooth(color = "red", method = lm) + 
   aes(group = species)
 
-
 last_plot() + 
   ggchalkboard::theme_chalkboard()
-
-
 ```
 
 ---
 
-
+# heat map experiment with https://github.com/teunbrand/ggplot_tricks
 
 ```{r}
 

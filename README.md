@@ -98,7 +98,7 @@ ggplot(cars) +
 
 ### `combine_aes()` examples containing recommended usage for new geom theming… use `from_theme()`, `col_mix()`, `paper`, `ink`, `accent` etc.
 
-#### GeomBubble, GeomBubbleColorMix, GeomPointAccentColor
+#### GeomBubble, GeomBubbleColorMixFilled, GeomPointToAccentColor
 
 ``` r
 GeomPoint$default_aes
@@ -138,28 +138,28 @@ aes_new_bubble_colmix <- aes(shape = 21,
                              size = from_theme(pointsize*4),
                              fill = from_theme(ggplot2:::col_mix(ink, paper, 0.35)))
 
-GeomBubbleColorMix <- ggproto("GeomBubbleColorMix", 
+GeomBubbleColorMixFilled <- ggproto("GeomBubbleColorMixFilled", 
                               GeomPoint, 
                               default_aes = combine_aes(GeomPoint$default_aes,
                                                         aes_new_bubble_colmix))
 
 ggplot(cars) + 
   aes(speed, dist) + 
-  qlayer(geom = GeomBubbleColorMix)
+  qlayer(geom = GeomBubbleColorMixFilled)
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
 
 ``` r
 
-GeomPointAccentColor <- ggproto("GeomPointAccentColor",  
+GeomPointToAccentColor <- ggproto("GeomPointToAccentColor",  
                                 GeomPoint,
                                 default_aes = combine_aes(GeomPoint$default_aes,
                                                           aes(color = from_theme(accent))))
 
 ggplot(cars) + 
   aes(speed, dist) + 
-  qlayer(geom = GeomPointAccentColor, size = 6, alpha = .5) + 
+  qlayer(geom = GeomPointToAccentColor, size = 6, alpha = .5) + 
   geom_smooth()
 #> `geom_smooth()` using method = 'loess' and formula = 'y ~ x'
 ```
@@ -174,6 +174,19 @@ last_plot() +
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-5-4.png)<!-- -->
+
+``` r
+
+new_accent <- ggplot2:::col_mix("purple", "lightyellow", .7)
+new_accent
+#> [1] "#E2BCE4FF"
+
+last_plot() + 
+  ggchalkboard::theme_chalkboard(accent = new_accent)
+#> `geom_smooth()` using method = 'loess' and formula = 'y ~ x'
+```
+
+![](README_files/figure-gfm/unnamed-chunk-5-5.png)<!-- -->
 
 #### GeomPolygonWithOutline, GeomPolygonOutline
 
@@ -351,7 +364,7 @@ ggplot(cars) +
   geom_point() +
   qlayer(geom = qproto_update(GeomPoint, 
                               aes(size = from_theme(pointsize * 3))),
-             stat = qstat(compute_group_mean))
+         stat = qstat(compute_group_mean))
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
@@ -417,7 +430,25 @@ vars_pack <- function(...) {
   listvec <- asplit(do.call(cbind, vars), 1)
   structure(listvec, varnames = varnames)
 
-  }
+}
+
+
+palmerpenguins::penguins |> 
+  mutate(outcome = species, 
+         predictors = vars_pack(bill_length_mm, bill_depth_mm, flipper_length_mm)) |> 
+  select(outcome, predictors) ->
+data_packed
+
+head(data_packed)
+#> # A tibble: 6 × 2
+#>   outcome predictors
+#>   <fct>   <list[1d]>
+#> 1 Adelie  <dbl [3]> 
+#> 2 Adelie  <dbl [3]> 
+#> 3 Adelie  <dbl [3]> 
+#> 4 Adelie  <dbl [3]> 
+#> 5 Adelie  <dbl [3]> 
+#> 6 Adelie  <dbl [3]>
 
 vars_unpack <- function(x) {
   pca_vars <- x
@@ -426,40 +457,26 @@ vars_unpack <- function(x) {
   as.data.frame(df)
   
 }
+
+
+data_packed %>%
+    mutate(vars_unpack(predictors)) %>% 
+  select(-predictors) ->
+data_uppacked
+
+head(data_uppacked)
+#> # A tibble: 6 × 4
+#>   outcome bill_length_mm bill_depth_mm flipper_length_mm
+#>   <fct>            <dbl>         <dbl>             <dbl>
+#> 1 Adelie            39.1          18.7               181
+#> 2 Adelie            39.5          17.4               186
+#> 3 Adelie            40.3          18                 195
+#> 4 Adelie            NA            NA                  NA
+#> 5 Adelie            36.7          19.3               193
+#> 6 Adelie            39.3          20.6               190
 ```
 
 ``` r
-palmerpenguins::penguins %>% 
-  mutate(outcome = species, 
-         predictors = vars_pack(bill_length_mm, bill_depth_mm, flipper_length_mm)) %>% 
-    select(outcome, predictors) ->
-data
-
-head(data$predictors)
-#> [[1]]
-#> [1]  39.1  18.7 181.0
-#> 
-#> [[2]]
-#> [1]  39.5  17.4 186.0
-#> 
-#> [[3]]
-#> [1]  40.3  18.0 195.0
-#> 
-#> [[4]]
-#> [1] NA NA NA
-#> 
-#> [[5]]
-#> [1]  36.7  19.3 193.0
-#> 
-#> [[6]]
-#> [1]  39.3  20.6 190.0
-
-
-data %>%
-    mutate(vars_unpack(predictors)) %>% 
-  select(-predictors) ->
-data
-
 
 compute_lm_multi <- function(data, scales){
   
@@ -481,11 +498,11 @@ compute_lm_multi <- function(data, scales){
   data
 }
 
-pvars <- vars_pack
+variables <- vars_pack
 
 palmerpenguins::penguins %>% 
   remove_missing() %>% 
-  mutate(x = bill_length_mm, y = bill_depth_mm, predictors = pvars(sex, species)) %>% 
+  mutate(x = bill_length_mm, y = bill_depth_mm, predictors = variables(sex, species)) %>% 
   select(x, y, predictors) %>% 
   compute_lm_multi()
 #> Warning: Removed 11 rows containing missing values or values outside the scale
@@ -504,21 +521,16 @@ palmerpenguins::penguins %>%
 #>  9  38.6  18.8     2       1  21.2  38.6     2.36 
 #> 10  34.6  18.1     2       1  21.1  34.6     3.01 
 #> # ℹ 323 more rows
-
-StatLmMulti <- ggproto("StatLmMulti",
-                       Stat,
-                       compute_panel = compute_lm_multi)
-
  
 palmerpenguins::penguins |>
   remove_missing() |>
   ggplot() + 
-  aes(y = flipper_length_mm, x = bill_length_mm, predictors = pvars(species)) + 
+  aes(y = flipper_length_mm, x = bill_length_mm, predictors = variables(species)) + 
   geom_point() + 
-  qlayer(stat = StatLmMulti, 
+  qlayer(stat = qstat_panel(compute_lm_multi), 
          geom = qproto_update(GeomPoint, 
                               aes(color = from_theme(accent)))) + 
-  qlayer(stat = StatLmMulti, 
+  qlayer(stat = qstat_panel(compute_lm_multi), 
          geom = qproto_update(GeomSegment,
                               aes(color = from_theme(accent))),
          linetype = "dotted")
@@ -530,7 +542,6 @@ palmerpenguins::penguins |>
 
 ``` r
 
-
 last_plot() + 
   geom_smooth(color = "red", method = lm) + 
   aes(group = species)
@@ -541,7 +552,6 @@ last_plot() +
 
 ``` r
 
-
 last_plot() + 
   ggchalkboard::theme_chalkboard()
 #> `geom_smooth()` using formula = 'y ~ x'
@@ -550,6 +560,8 @@ last_plot() +
 ![](README_files/figure-gfm/unnamed-chunk-14-3.png)<!-- -->
 
 ------------------------------------------------------------------------
+
+# heat map experiment with <https://github.com/teunbrand/ggplot_tricks>
 
 ``` r
 
