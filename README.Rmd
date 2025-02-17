@@ -16,15 +16,16 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 <!-- badges: end -->
 
-ggex (think 'FedEx') is for 'ex' as in fast and expressive and 'ex' for extension/extenders.
+ggex (think 'FedEx' for pronounciation) is for 'ex' as in fast and expressive and 'ex' for extension/extenders.
 
 
 ## `qlayer()`, is `layer()` with plenty of defaults
 
 ```{r qlayer}
+#' @export
 qlayer <- function (mapping = NULL, data = NULL, geom = ggplot2::GeomPoint, 
                     stat = ggplot2::StatIdentity, 
-    position = position_identity(), ..., na.rm = FALSE, show.legend = NA, 
+    position = ggplot2::position_identity(), ..., na.rm = FALSE, show.legend = NA, 
     inherit.aes = TRUE) 
 {
     ggplot2::layer(data = data, mapping = mapping, geom = geom, 
@@ -53,7 +54,8 @@ last_plot() +
 
 ## `combine_aes()` to make small adjustments to exising `default_aes` settings
 
-```{r}
+```{r combine_aes}
+#' @export
 combine_aes <- utils::modifyList
 ```
 
@@ -129,39 +131,42 @@ last_plot() +
   ggchalkboard::theme_chalkboard(accent = new_accent)
 ```
 
+### common cases GeomPolygon and GeomLabel modifications
 
 #### GeomPolygonWithOutline, GeomPolygonOutline
 
 ```{r}
-GeomPolygonWithOutline <- ggproto("GeomPolygonWithOutline", 
+GeomPolygonOutlined <- ggproto("GeomPolygonOutlined", 
                                   GeomPolygon,
                                   default_aes = combine_aes(GeomPolygon$default_aes,
                                                             aes(color = from_theme(ink),
                                                                 fill = from_theme(ggplot2:::col_mix(ink, paper, 0.85)))))
   
-GeomPolygonOutline <- ggproto("GeomPolygonOutline",  # New Geom
+GeomPolygonPerimeter <- ggproto("GeomPolygonPerimeter",  # New Geom
                               GeomPolygon, # inherit
                               default_aes = combine_aes(GeomPolygon$default_aes,
                                                         aes(color = from_theme(ink),
                                                             fill = NA)))
+```
 
+```{r}
 ggplot(cars) + 
   aes(speed, dist) + 
-  qlayer(geom = GeomPolygonWithOutline)
+  qlayer(geom = GeomPolygonOutlined)
 
 last_plot() + 
   ggchalkboard::theme_chalkboard()
 
 ggplot(cars) + 
   aes(speed, dist) + 
-  qlayer(geom = GeomPolygonOutline)
+  qlayer(geom = GeomPolygonPerimeter)
 
 last_plot() + 
   ggchalkboard::theme_chalkboard()
 ```
 
 
-#### GeomLabelClearBackground, GeomLabelWithPanelBackground, GeomLabelWithPanelBackground
+#### GeomLabelClearBackground, GeomLabelWithPanelBackground, GeomLabelRepelWithPanelBackground
 
 ```{r}
 GeomLabelClearBackground <- ggproto("GeomLabelClearBackground",
@@ -221,7 +226,7 @@ ggplot(cars) +
 ## `qproto_update()` lets you use an existing proto object, minimally modified, in a layer(), qlayer(), geom_\*() or stat_*() function.  
 
 
-```{r}
+```{r qproto_update}
 proto_update <- function (`_class`, `_inherit`, default_aes_update = NULL, ...) {
     if (!is.null(default_aes_update)) {
         
@@ -238,7 +243,7 @@ proto_update <- function (`_class`, `_inherit`, default_aes_update = NULL, ...) 
                      default_aes = new_default_aes, ...)
 }
 
-
+#' @export
 qproto_update <- function (`_inherit`, default_aes_update = NULL, ...){
     proto_update("protoTemp", `_inherit`, default_aes_update = default_aes_update, 
         ...)
@@ -254,12 +259,13 @@ ggplot(cars) +
 ```
 
 
-## The `qstat()` family lets you try out Stats without naming them.
+## The `qstat()` family lets you try out Stat definitions without naming them.
 
 
-```{r}
+```{r qstat}
+#' @export
 qstat <- function (compute_group = ggplot2::Stat$compute_group, ...) {
-    ggplot2::ggproto("StatTemp", Stat, compute_group = compute_group, 
+    ggplot2::ggproto("StatTemp", ggplot2::Stat, compute_group = compute_group, 
         ...)
 }
 ```
@@ -284,16 +290,19 @@ last_plot() +
 ```
 
 
-```{r}
+```{r qstat_group}
+#' @export
 qstat_group <- qstat
 
+#' @export
 qstat_layer <- function (compute_layer, ...){
-    ggplot2::ggproto("StatTemp", Stat, compute_layer = compute_layer, 
+    ggplot2::ggproto("StatTemp", ggplot2::Stat, compute_layer = compute_layer, 
         ...)
 }
 
+#' @export
 qstat_panel <- function (compute_panel, ...){
-    ggplot2::ggproto("StatTemp", Stat, compute_panel = compute_panel, 
+    ggplot2::ggproto("StatTemp", ggplot2::Stat, compute_panel = compute_panel, 
         ...)
 }
 ```
@@ -313,9 +322,8 @@ https://github.com/ggplot2-extenders/ggplot-extension-club/discussions/18#discus
 > I edited your code a bit, introducing the nesting-unnesting functions vars_pack() and vars_unpack(). Essentially, the predictor columns are nested into a single column and lays dormant until you need it for PCA, at which point it's unnested back into a dataframe. Also note that remove_missing() should happen after the unnesting to spot individual NA values.
 
 
-```{r}
-library(tidyverse)
-
+```{r vars_pack}
+#' @export
 vars_pack <- function(...) {
   
   varnames <- as.character(ensyms(...))
@@ -325,15 +333,7 @@ vars_pack <- function(...) {
 
 }
 
-
-palmerpenguins::penguins |> 
-  mutate(outcome = species, 
-         predictors = vars_pack(bill_length_mm, bill_depth_mm, flipper_length_mm)) |> 
-  select(outcome, predictors) ->
-data_packed
-
-head(data_packed)
-
+#' @export
 vars_unpack <- function(x) {
   pca_vars <- x
   df <- do.call(rbind, pca_vars)
@@ -341,7 +341,19 @@ vars_unpack <- function(x) {
   as.data.frame(df)
   
 }
+```
 
+### data manipulation 
+
+```{r}
+library(tidyverse)
+palmerpenguins::penguins |> 
+  mutate(outcome = species, 
+         predictors = vars_pack(bill_length_mm, bill_depth_mm, flipper_length_mm)) |> 
+  select(outcome, predictors) ->
+data_packed
+
+head(data_packed)
 
 data_packed %>%
     mutate(vars_unpack(predictors)) %>% 
@@ -352,9 +364,9 @@ head(data_uppacked)
 
 ```
 
+### in ggplot2 computation
 
 ```{r}
-
 compute_lm_multi <- function(data, scales){
   
   data %>% 
@@ -386,7 +398,7 @@ palmerpenguins::penguins %>%
 palmerpenguins::penguins |>
   remove_missing() |>
   ggplot() + 
-  aes(y = flipper_length_mm, x = bill_length_mm, predictors = variables(species)) + 
+  aes(y = flipper_length_mm, x = bill_length_mm, predictors = variables(sex, species)) + 
   geom_point() + 
   qlayer(stat = qstat_panel(compute_lm_multi), 
          geom = qproto_update(GeomPoint, 
@@ -398,7 +410,7 @@ palmerpenguins::penguins |>
 
 last_plot() + 
   geom_smooth(color = "red", method = lm) + 
-  aes(group = species)
+  aes(group = interaction(species, sex))
 
 last_plot() + 
   ggchalkboard::theme_chalkboard()
@@ -406,7 +418,7 @@ last_plot() +
 
 ---
 
-# heat map experiment with https://github.com/teunbrand/ggplot_tricks
+# a heat map experiment with https://github.com/teunbrand/ggplot_tricks
 
 ```{r}
 
@@ -442,8 +454,37 @@ ggplot(tidy_titanic) +
 
 last_plot() + 
   ggchalkboard::theme_chalkboard()
+```
 
+---
 
+# Minimally package
+
+```{r, eval = F}
+devtools::create(".")
 ```
 
 
+```{r}
+knitrExtra::chunk_names_get()
+```
+
+```{r}
+knitrExtra::chunk_to_dir("qlayer")
+knitrExtra::chunk_to_dir("combine_aes")
+knitrExtra::chunk_to_dir("qproto_update")
+knitrExtra::chunk_to_dir("qstat")
+knitrExtra::chunk_to_dir("qstat_group")
+knitrExtra::chunk_to_dir("vars_pack")
+```
+
+```{r}
+usethis::use_package("ggplot2")
+usethis::use_package("utils")
+```
+
+
+```{r, eval = F}
+devtools::check()
+devtools::install(pkg = ".", upgrade = "never")
+```

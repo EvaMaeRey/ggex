@@ -6,15 +6,16 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-ggex (think ‘FedEx’) is for ‘ex’ as in fast and expressive and ‘ex’ for
-extension/extenders.
+ggex (think ‘FedEx’ for pronounciation) is for ‘ex’ as in fast and
+expressive and ‘ex’ for extension/extenders.
 
 ## `qlayer()`, is `layer()` with plenty of defaults
 
 ``` r
+#' @export
 qlayer <- function (mapping = NULL, data = NULL, geom = ggplot2::GeomPoint, 
                     stat = ggplot2::StatIdentity, 
-    position = position_identity(), ..., na.rm = FALSE, show.legend = NA, 
+    position = ggplot2::position_identity(), ..., na.rm = FALSE, show.legend = NA, 
     inherit.aes = TRUE) 
 {
     ggplot2::layer(data = data, mapping = mapping, geom = geom, 
@@ -60,6 +61,7 @@ last_plot() +
 ## `combine_aes()` to make small adjustments to exising `default_aes` settings
 
 ``` r
+#' @export
 combine_aes <- utils::modifyList
 ```
 
@@ -94,7 +96,7 @@ ggplot(cars) +
   stat_identity(geom = GeomBluePoint)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
 
 ### `combine_aes()` examples containing recommended usage for new geom theming… use `from_theme()`, `col_mix()`, `paper`, `ink`, `accent` etc.
 
@@ -130,7 +132,7 @@ ggplot(cars) +
   qlayer(geom = GeomBubble)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
 
 ``` r
 
@@ -148,7 +150,7 @@ ggplot(cars) +
   qlayer(geom = GeomBubbleColorMixFilled)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-4-2.png)<!-- -->
 
 ``` r
 
@@ -164,7 +166,7 @@ ggplot(cars) +
 #> `geom_smooth()` using method = 'loess' and formula = 'y ~ x'
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-4-3.png)<!-- -->
 
 ``` r
 
@@ -173,7 +175,7 @@ last_plot() +
 #> `geom_smooth()` using method = 'loess' and formula = 'y ~ x'
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-4.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-4-4.png)<!-- -->
 
 ``` r
 
@@ -186,26 +188,30 @@ last_plot() +
 #> `geom_smooth()` using method = 'loess' and formula = 'y ~ x'
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-5.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-4-5.png)<!-- -->
+
+### common cases GeomPolygon and GeomLabel modifications
 
 #### GeomPolygonWithOutline, GeomPolygonOutline
 
 ``` r
-GeomPolygonWithOutline <- ggproto("GeomPolygonWithOutline", 
+GeomPolygonOutlined <- ggproto("GeomPolygonOutlined", 
                                   GeomPolygon,
                                   default_aes = combine_aes(GeomPolygon$default_aes,
                                                             aes(color = from_theme(ink),
                                                                 fill = from_theme(ggplot2:::col_mix(ink, paper, 0.85)))))
   
-GeomPolygonOutline <- ggproto("GeomPolygonOutline",  # New Geom
+GeomPolygonPerimeter <- ggproto("GeomPolygonPerimeter",  # New Geom
                               GeomPolygon, # inherit
                               default_aes = combine_aes(GeomPolygon$default_aes,
                                                         aes(color = from_theme(ink),
                                                             fill = NA)))
+```
 
+``` r
 ggplot(cars) + 
   aes(speed, dist) + 
-  qlayer(geom = GeomPolygonWithOutline)
+  qlayer(geom = GeomPolygonOutlined)
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
@@ -222,7 +228,7 @@ last_plot() +
 
 ggplot(cars) + 
   aes(speed, dist) + 
-  qlayer(geom = GeomPolygonOutline)
+  qlayer(geom = GeomPolygonPerimeter)
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-6-3.png)<!-- -->
@@ -235,7 +241,7 @@ last_plot() +
 
 ![](README_files/figure-gfm/unnamed-chunk-6-4.png)<!-- -->
 
-#### GeomLabelClearBackground, GeomLabelWithPanelBackground, GeomLabelWithPanelBackground
+#### GeomLabelClearBackground, GeomLabelWithPanelBackground, GeomLabelRepelWithPanelBackground
 
 ``` r
 GeomLabelClearBackground <- ggproto("GeomLabelClearBackground",
@@ -327,7 +333,7 @@ proto_update <- function (`_class`, `_inherit`, default_aes_update = NULL, ...) 
                      default_aes = new_default_aes, ...)
 }
 
-
+#' @export
 qproto_update <- function (`_inherit`, default_aes_update = NULL, ...){
     proto_update("protoTemp", `_inherit`, default_aes_update = default_aes_update, 
         ...)
@@ -341,13 +347,14 @@ ggplot(cars) +
          size = 8)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
-## The `qstat()` family lets you try out Stats without naming them.
+## The `qstat()` family lets you try out Stat definitions without naming them.
 
 ``` r
+#' @export
 qstat <- function (compute_group = ggplot2::Stat$compute_group, ...) {
-    ggplot2::ggproto("StatTemp", Stat, compute_group = compute_group, 
+    ggplot2::ggproto("StatTemp", ggplot2::Stat, compute_group = compute_group, 
         ...)
 }
 ```
@@ -367,7 +374,7 @@ ggplot(cars) +
          stat = qstat(compute_group_mean))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 ``` r
 
@@ -375,18 +382,21 @@ last_plot() +
   ggchalkboard::theme_chalkboard()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-11-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-9-2.png)<!-- -->
 
 ``` r
+#' @export
 qstat_group <- qstat
 
+#' @export
 qstat_layer <- function (compute_layer, ...){
-    ggplot2::ggproto("StatTemp", Stat, compute_layer = compute_layer, 
+    ggplot2::ggproto("StatTemp", ggplot2::Stat, compute_layer = compute_layer, 
         ...)
 }
 
+#' @export
 qstat_panel <- function (compute_panel, ...){
-    ggplot2::ggproto("StatTemp", Stat, compute_panel = compute_panel, 
+    ggplot2::ggproto("StatTemp", ggplot2::Stat, compute_panel = compute_panel, 
         ...)
 }
 ```
@@ -412,6 +422,29 @@ June wrote this…
 > individual NA values.
 
 ``` r
+#' @export
+vars_pack <- function(...) {
+  
+  varnames <- as.character(ensyms(...))
+  vars <- list(...)
+  listvec <- asplit(do.call(cbind, vars), 1)
+  structure(listvec, varnames = varnames)
+
+}
+
+#' @export
+vars_unpack <- function(x) {
+  pca_vars <- x
+  df <- do.call(rbind, pca_vars)
+  colnames(df) <- attr(pca_vars, "varnames")
+  as.data.frame(df)
+  
+}
+```
+
+### data manipulation
+
+``` r
 library(tidyverse)
 #> ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
 #> ✔ dplyr     1.1.4     ✔ readr     2.1.5
@@ -422,17 +455,6 @@ library(tidyverse)
 #> ✖ dplyr::filter() masks stats::filter()
 #> ✖ dplyr::lag()    masks stats::lag()
 #> ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
-
-vars_pack <- function(...) {
-  
-  varnames <- as.character(ensyms(...))
-  vars <- list(...)
-  listvec <- asplit(do.call(cbind, vars), 1)
-  structure(listvec, varnames = varnames)
-
-}
-
-
 palmerpenguins::penguins |> 
   mutate(outcome = species, 
          predictors = vars_pack(bill_length_mm, bill_depth_mm, flipper_length_mm)) |> 
@@ -449,15 +471,6 @@ head(data_packed)
 #> 4 Adelie  <dbl [3]> 
 #> 5 Adelie  <dbl [3]> 
 #> 6 Adelie  <dbl [3]>
-
-vars_unpack <- function(x) {
-  pca_vars <- x
-  df <- do.call(rbind, pca_vars)
-  colnames(df) <- attr(pca_vars, "varnames")
-  as.data.frame(df)
-  
-}
-
 
 data_packed %>%
     mutate(vars_unpack(predictors)) %>% 
@@ -476,8 +489,9 @@ head(data_uppacked)
 #> 6 Adelie            39.3          20.6               190
 ```
 
-``` r
+### in ggplot2 computation
 
+``` r
 compute_lm_multi <- function(data, scales){
   
   data %>% 
@@ -525,7 +539,7 @@ palmerpenguins::penguins %>%
 palmerpenguins::penguins |>
   remove_missing() |>
   ggplot() + 
-  aes(y = flipper_length_mm, x = bill_length_mm, predictors = variables(species)) + 
+  aes(y = flipper_length_mm, x = bill_length_mm, predictors = variables(sex, species)) + 
   geom_point() + 
   qlayer(stat = qstat_panel(compute_lm_multi), 
          geom = qproto_update(GeomPoint, 
@@ -538,17 +552,17 @@ palmerpenguins::penguins |>
 #> range.
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 ``` r
 
 last_plot() + 
   geom_smooth(color = "red", method = lm) + 
-  aes(group = species)
+  aes(group = interaction(species, sex))
 #> `geom_smooth()` using formula = 'y ~ x'
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-14-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-11-2.png)<!-- -->
 
 ``` r
 
@@ -557,11 +571,11 @@ last_plot() +
 #> `geom_smooth()` using formula = 'y ~ x'
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-14-3.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-11-3.png)<!-- -->
 
 ------------------------------------------------------------------------
 
-# heat map experiment with <https://github.com/teunbrand/ggplot_tricks>
+# a heat map experiment with <https://github.com/teunbrand/ggplot_tricks>
 
 ``` r
 
@@ -603,7 +617,7 @@ ggplot(tidy_titanic) +
                                   )))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 ``` r
 
@@ -611,4 +625,50 @@ last_plot() +
   ggchalkboard::theme_chalkboard()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-15-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-12-2.png)<!-- -->
+
+------------------------------------------------------------------------
+
+# Minimally package
+
+``` r
+devtools::create(".")
+```
+
+``` r
+knitrExtra::chunk_names_get()
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+#>  [1] "unnamed-chunk-1"  "qlayer"           "unnamed-chunk-2"  "combine_aes"     
+#>  [5] "unnamed-chunk-3"  "unnamed-chunk-4"  "unnamed-chunk-5"  "unnamed-chunk-6" 
+#>  [9] "unnamed-chunk-7"  "qproto_update"    "unnamed-chunk-8"  "qstat"           
+#> [13] "unnamed-chunk-9"  "qstat_group"      "vars_pack"        "unnamed-chunk-10"
+#> [17] "unnamed-chunk-11" "unnamed-chunk-12" "unnamed-chunk-13" "unnamed-chunk-14"
+#> [21] "unnamed-chunk-15" "unnamed-chunk-16" "unnamed-chunk-17"
+```
+
+``` r
+knitrExtra::chunk_to_dir("qlayer")
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+knitrExtra::chunk_to_dir("combine_aes")
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+knitrExtra::chunk_to_dir("qproto_update")
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+knitrExtra::chunk_to_dir("qstat")
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+knitrExtra::chunk_to_dir("qstat_group")
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+knitrExtra::chunk_to_dir("vars_pack")
+#> It seems you are currently knitting a Rmd/Qmd file. The parsing of the file will be done in a new R session.
+```
+
+``` r
+usethis::use_package("ggplot2")
+#> ✔ Setting active project to '/Users/evangelinereynolds/Google
+#> Drive/r_packages/ggex'
+usethis::use_package("utils")
+```
+
+``` r
+devtools::check()
+devtools::install(pkg = ".", upgrade = "never")
+```
